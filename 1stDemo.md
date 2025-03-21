@@ -1,4 +1,3 @@
-Here's a line-by-line explanation of your `Playwright` script:
 
 ### 1. **Importing the required module**
 ```python
