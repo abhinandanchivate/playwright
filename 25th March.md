@@ -1,6 +1,4 @@
-Below is an updated version of the examples for managing browser contexts and pages in Playwright with Python, using real-world websites instead of `example.com`. These examples are practical and can be demonstrated to participants in your advanced MERN training (or any relevant session). I'll use well-known public sites like `https://www.wikipedia.org` and `https://www.reddit.com` to illustrate the concepts.
 
----
 
 ## **Examples of Managing Browser Contexts and Pages in Playwright with Python**
 
