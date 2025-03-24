@@ -1,412 +1,353 @@
-I can’t directly create or share a `.zip` file as an AI text-based assistant, but I can provide you with the exact file structure and contents that you can easily package into a `.zip` file yourself. Below, I’ll outline the complete directory structure for the MERN task management app and the Playwright tests, including all necessary files. You can copy these into a folder on your local machine, then compress that folder into a `.zip` file using any standard tool (e.g., right-click "Compress to ZIP" on Windows, or `zip -r mern-training.zip mern-training/` on Linux/Mac).
-
-Here’s the step-by-step structure and content:
+Below, I’ve adapted the examples for **navigating to a URL in Playwright with Python** to fit a hypothetical MERN (MongoDB, Express, React, Node.js) application context. I’ll assume the MERN app is a task management system running locally at `http://localhost:3000` (React frontend) with an Express API at `http://localhost:5000`. The examples will reflect realistic navigation scenarios you might encounter in such an app—e.g., landing pages, login flows, dynamic task lists, and API-driven pages. These are tailored for your advanced MERN training participants to see Playwright in action with their full-stack project.
 
 ---
 
-## **Directory Structure for MERN Training Zip**
+## **Conceptual Usages of Navigating to a URL in Playwright with Python (MERN Context)**
 
-```
-mern-training/
-├── backend/
-│   ├── package.json
-│   ├── server.js
-│   └── node_modules/ (generated after npm install)
-├── frontend/
-│   ├── package.json
-│   ├── src/
-│   │   ├── App.js
-│   │   ├── Login.js
-│   │   ├── Tasks.js
-│   │   ├── TaskDetails.js
-│   │   ├── Dashboard.js
-│   │   └── index.js
-│   └── node_modules/ (generated after npm install)
-├── tests/
-│   ├── test_navigation.py
-│   ├── requirements.txt
-│   └── mern_auth_state.json (generated after running auth setup)
-└── README.md
-```
+For this setup:
+- **Frontend**: React app at `http://localhost:3000` (e.g., task management UI).
+- **Backend**: Express API at `http://localhost:5000` (e.g., `/api/tasks` endpoint).
+- **Features**: Login page, task list, task creation, and a dashboard.
+
+All examples use the synchronous Playwright API, but they can be adapted to async if preferred.
 
 ---
 
-## **File Contents**
+### **1. Basic Navigation to the MERN App Homepage**
+Navigate to the app’s root URL.
 
-### **1. Backend (Express + MongoDB)**
+```python
+from playwright.sync_api import sync_playwright
 
-**`backend/package.json`**
-```json
-{
-  "name": "mern-backend",
-  "version": "1.0.0",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.0"
-  }
-}
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    page.goto("http://localhost:3000")
+    print("Homepage title:", page.title())  # Expected: "Task Manager"
+    browser.close()
 ```
 
-**`backend/server.js`**
-```javascript
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-mongoose.connect('mongodb://localhost:27017/taskmanager', { useNewUrlParser: true, useUnifiedTopology: true });
-
-const Task = mongoose.model('Task', new mongoose.Schema({
-  title: String,
-  status: { type: String, enum: ['pending', 'completed'], default: 'pending' },
-}));
-
-const User = mongoose.model('User', new mongoose.Schema({
-  username: String,
-  password: String,
-}));
-
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
-  try {
-    jwt.verify(token, 'secret');
-    next();
-  } catch (e) {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-};
-
-app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  const user = await User.findOne({ username, password });
-  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-  const token = jwt.sign({ username }, 'secret', { expiresIn: '1h' });
-  res.json({ token });
-});
-
-app.get('/api/tasks', authMiddleware, async (req, res) => {
-  const { status } = req.query;
-  const tasks = await Task.find(status ? { status } : {});
-  res.json(tasks);
-});
-
-app.get('/api/tasks/:id', authMiddleware, async (req, res) => {
-  const task = await Task.findById(req.params.id);
-  res.json(task || { message: 'Task not found' });
-});
-
-app.listen(5000, () => console.log('Server running on http://localhost:5000'));
-```
+- **Use Case**: Test the initial load of the React app.
+- **MERN Context**: Ensures the frontend server is running and renders the homepage.
 
 ---
 
-### **2. Frontend (React)**
+### **2. Navigation with Wait Options**
+Wait for specific load states in a dynamic React app.
 
-**`frontend/package.json`**
-```json
-{
-  "name": "mern-frontend",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0",
-    "react-scripts": "5.0.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build"
-  },
-  "proxy": "http://localhost:5000"
-}
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+
+    # Wait for DOM (React renders initial UI)
+    page.goto("http://localhost:3000/tasks", wait_until="domcontentloaded")
+    print("Tasks page DOM loaded:", page.title())
+
+    # Wait for API calls to finish (e.g., fetching tasks)
+    page.goto("http://localhost:3000/dashboard", wait_until="networkidle")
+    print("Dashboard fully loaded:", page.title())
+
+    browser.close()
 ```
 
-**`frontend/src/App.js`**
-```javascript
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import Login from './Login';
-import Tasks from './Tasks';
-import TaskDetails from './TaskDetails';
-import Dashboard from './Dashboard';
+- **Options for `wait_until`**:
+  - `"domcontentloaded"`: Good for React’s initial render.
+  - `"networkidle"`: Ensures API-driven content (e.g., MongoDB task data) loads.
+- **MERN Context**: Handles React’s client-side rendering and API fetches.
 
-function App() {
-  const [token, setToken] = useState(localStorage.getItem('token'));
+---
 
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<h1>Task Manager</h1>} />
-        <Route path="/login" element={<Login setToken={setToken} />} />
-        <Route path="/tasks" element={token ? <Tasks token={token} /> : <Navigate to="/login" />} />
-        <Route path="/tasks/:id" element={token ? <TaskDetails token={token} /> : <Navigate to="/login" />} />
-        <Route path="/dashboard" element={token ? <Dashboard token={token} /> : <Navigate to="/login" />} />
-      </Routes>
-    </Router>
-  );
-}
+### **3. Navigation with Timeout**
+Prevent hanging if the MERN app or API is slow.
 
-export default App;
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    try:
+        page.goto("http://localhost:3000/tasks", timeout=3000)  # 3 seconds
+        print("Tasks page title:", page.title())
+    except Exception as e:
+        print("Navigation failed:", str(e))
+    browser.close()
 ```
 
-**`frontend/src/Login.js`**
-```javascript
-import React from 'react';
+- **Use Case**: Test responsiveness of the MERN stack under load or failure.
+- **MERN Context**: Useful when MongoDB queries or Express responses delay page load.
 
-function Login({ setToken }) {
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const username = e.target.username.value;
-    const password = e.target.password.value;
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      setToken(data.token);
-    }
-  };
+---
 
-  return (
-    <form onSubmit={handleSubmit}>
-      <input name="username" placeholder="Username" />
-      <input name="password" type="password" placeholder="Password" />
-      <button type="submit">Login</button>
-    </form>
-  );
-}
+### **4. Navigation with Custom Headers**
+Simulate authenticated requests or custom client info.
 
-export default Login;
-```
+```python
+from playwright.sync_api import sync_playwright
 
-**`frontend/src/Tasks.js`**
-```javascript
-import React, { useState, useEffect } from 'react';
-
-function Tasks({ token }) {
-  const [tasks, setTasks] = useState([]);
-
-  useEffect(() => {
-    fetch('/api/tasks', {
-      headers: { Authorization: `Bearer ${token}` },
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    context = browser.new_context(extra_http_headers={
+        "Authorization": "Bearer mock-jwt-token",
+        "X-App-Version": "1.0.0"
     })
-      .then(res => res.json())
-      .then(data => setTasks(data));
-  }, [token]);
-
-  return (
-    <div>
-      <h1>Tasks</h1>
-      <ul className="task-list">
-        {tasks.map(task => (
-          <li key={task._id} className="task-item">{task.title} - {task.status}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default Tasks;
+    page = context.new_page()
+    page.goto("http://localhost:3000/dashboard")
+    print("Dashboard title:", page.title())  # Expected: "Dashboard - Task Manager"
+    browser.close()
 ```
 
-**`frontend/src/TaskDetails.js`**
-```javascript
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-
-function TaskDetails({ token }) {
-  const { id } = useParams();
-  const [task, setTask] = useState(null);
-
-  useEffect(() => {
-    fetch(`/api/tasks/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.json())
-      .then(data => setTask(data));
-  }, [id, token]);
-
-  return task ? <h1>Task: {task.title}</h1> : <p>Loading...</p>;
-}
-
-export default TaskDetails;
-```
-
-**`frontend/src/Dashboard.js`**
-```javascript
-import React from 'react';
-
-function Dashboard() {
-  return <h1>Dashboard - Task Manager</h1>;
-}
-
-export default Dashboard;
-```
-
-**`frontend/src/index.js`**
-```javascript
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
-
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
-```
+- **Use Case**: Test protected routes requiring JWT tokens from Express.
+- **MERN Context**: Mimics a logged-in user accessing a restricted React page.
 
 ---
 
-### **3. Playwright Tests**
+### **5. Navigation with Query Parameters**
+Navigate to a filtered task list.
 
-**`tests/test_navigation.py`**
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    filter = "completed"
+    url = f"http://localhost:3000/tasks?status={filter}"
+    page.goto(url)
+    print("Filtered tasks title:", page.title())  # Expected: "Tasks - Task Manager"
+    browser.close()
+```
+
+- **Use Case**: Test React Router or Express query handling.
+- **MERN Context**: Verifies frontend routing and backend filtering from MongoDB.
+
+---
+
+### **6. Handling Redirects During Navigation**
+Test login redirects in the MERN app.
+
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    response = page.goto("http://localhost:3000/dashboard")  # Redirects to login if not authenticated
+    print("Final URL:", response.url)  # Expected: "http://localhost:3000/login"
+    print("Status:", response.status)  # Expected: 200 after redirect
+    browser.close()
+```
+
+- **Use Case**: Validate authentication middleware in Express redirecting to `/login`.
+- **MERN Context**: Ensures React Router and Express work together for auth flows.
+
+---
+
+### **7. Navigation with Event Listeners**
+Monitor API calls during navigation.
+
+```python
+from playwright.sync_api import sync_playwright
+
+def handle_response(response):
+    if "api/tasks" in response.url:
+        print(f"API call: {response.url}, Status: {response.status}")
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    page.on("response", handle_response)
+    page.goto("http://localhost:3000/tasks")
+    print("Tasks page title:", page.title())
+    browser.close()
+```
+
+- **Use Case**: Debug Express API responses powering the React UI.
+- **MERN Context**: Tracks MongoDB data fetching via the `/api/tasks` endpoint.
+
+---
+
+### **8. Navigation with Explicit Waits**
+Wait for a task list to render after navigation.
+
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    page.goto("http://localhost:3000/tasks")
+    page.wait_for_selector(".task-list")  # Wait for task list element
+    task_count = len(page.query_selector_all(".task-item"))
+    print("Number of tasks:", task_count)
+    browser.close()
+```
+
+- **Use Case**: Ensure React renders dynamic content from MongoDB.
+- **MERN Context**: Confirms API data integration into the React UI.
+
+---
+
+### **9. Navigation in a New Tab**
+Open task details in a new tab.
+
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    context = browser.new_context()
+    page1 = context.new_page()
+    page1.goto("http://localhost:3000/tasks")
+
+    # Open task details in a new tab
+    page2 = context.new_page()
+    page2.goto("http://localhost:3000/tasks/123")  # Assuming task ID 123
+    print("Page1 title:", page1.title())  # "Tasks - Task Manager"
+    print("Page2 title:", page2.title())  # "Task Details - Task Manager"
+    context.close()
+    browser.close()
+```
+
+- **Use Case**: Test navigation between task list and detail views.
+- **MERN Context**: Simulates React Router navigation within the same session.
+
+---
+
+### **10. Navigation with Authentication**
+Navigate as a logged-in user using storage state.
+
+```python
+from playwright.sync_api import sync_playwright
+import json
+
+# Save login state (run once)
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto("http://localhost:3000/login")
+    page.fill("input[name='username']", "testuser")
+    page.fill("input[name='password']", "password123")
+    page.click("button[type='submit']")
+    page.wait_for_url("http://localhost:3000/dashboard")
+    context.storage_state(path="mern_auth_state.json")
+    browser.close()
+
+# Use authenticated state
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    context = browser.new_context(storage_state="mern_auth_state.json")
+    page = context.new_page()
+    page.goto("http://localhost:3000/dashboard")
+    print("Dashboard title:", page.title())  # "Dashboard - Task Manager"
+    browser.close()
+```
+
+- **Use Case**: Skip login for repeated tests of protected routes.
+- **MERN Context**: Integrates Express JWT auth with React UI.
+
+---
+
+### **11. Navigation with Retry Logic**
+Retry navigation if the MERN app is temporarily unavailable.
+
+```python
+from playwright.sync_api import sync_playwright
+import time
+
+def navigate_with_retry(page, url, retries=3):
+    for attempt in range(retries):
+        try:
+            page.goto(url, timeout=3000)
+            return True
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {str(e)}")
+            time.sleep(1)
+    return False
+
+with sync_playwright() as p:
+    browser = p.chromium.launch()
+    page = browser.new_page()
+    success = navigate_with_retry(page, "http://localhost:3000/tasks")
+    print("Navigation successful:", success)
+    browser.close()
+```
+
+- **Use Case**: Handle Express server restarts or MongoDB connection delays.
+- **MERN Context**: Ensures robust testing in development environments.
+
+---
+
+### **12. Navigation in Headless vs. Headful Mode**
+Test the MERN app visibly or silently.
+
+```python
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    # Headless mode
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.goto("http://localhost:3000")
+    print("Headless title:", page.title())
+    browser.close()
+
+    # Headful mode
+    browser = p.chromium.launch(headless=False)
+    page = browser.new_page()
+    page.goto("http://localhost:3000/tasks")
+    print("Headful title:", page.title())
+    browser.close()
+```
+
+- **Use Case**: Debug React UI issues (`headless=False`) or run in CI (`headless=True`).
+- **MERN Context**: Validates frontend rendering in different modes.
+
+---
+
+### **13. Navigation with Pytest Integration**
+Structure navigation tests for the MERN app.
+
 ```python
 import pytest
 from playwright.sync_api import sync_playwright
-import json
-import time
 
-# Save auth state (run once)
-def save_auth_state():
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto("http://localhost:3000/login")
-        page.fill("input[name='username']", "testuser")
-        page.fill("input[name='password']", "password123")
-        page.click("button[type='submit']")
-        page.wait_for_url("http://localhost:3000/dashboard")
-        context.storage_state(path="mern_auth_state.json")
-        browser.close()
-
-# Fixture for authenticated context
 @pytest.fixture(scope="module")
-def auth_page():
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        context = browser.new_context(storage_state="mern_auth_state.json")
-        page = context.new_page()
-        yield page
-        browser.close()
-
-# Basic navigation
-def test_homepage():
+def page():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
-        page.goto("http://localhost:3000")
-        assert page.title() == "Task Manager"
+        yield page
+        browser.close()
 
-# Navigation with waits
-def test_tasks_load(auth_page):
-    auth_page.goto("http://localhost:3000/tasks", wait_until="networkidle")
-    auth_page.wait_for_selector(".task-list")
-    assert "Tasks" in auth_page.title()
+def test_homepage_navigation(page):
+    page.goto("http://localhost:3000")
+    assert page.title() == "Task Manager"
 
-# Navigation with retry
-def test_dashboard_with_retry(auth_page):
-    def navigate_with_retry(page, url, retries=3):
-        for attempt in range(retries):
-            try:
-                page.goto(url, timeout=3000)
-                return True
-            except Exception as e:
-                print(f"Attempt {attempt + 1} failed: {str(e)}")
-                time.sleep(1)
-        return False
-    success = navigate_with_retry(auth_page, "http://localhost:3000/dashboard")
-    assert success and "Dashboard" in auth_page.title()
-
-if __name__ == "__main__":
-    save_auth_state()  # Run this once to generate auth state
+def test_tasks_navigation(page):
+    page.goto("http://localhost:3000/tasks")
+    page.wait_for_selector(".task-list")
+    assert "Tasks" in page.title()
 ```
 
-**`tests/requirements.txt`**
-```
-playwright==1.42.0
-pytest==8.1.1
-```
+- **Use Case**: Automate testing of MERN app navigation flows.
+- **MERN Context**: Verifies React Router and Express API integration.
 
 ---
 
-### **4. Root Files**
+## **Notes for Participants**
+- **Setup**: Ensure the MERN app is running locally (`npm start` for React at `:3000`, `node server.js` for Express at `:5000`).
+- **Selectors**: Adjust `.task-list`, `.task-item`, or input names based on your app’s DOM structure.
+- **Auth**: The login example assumes a basic form; tweak it for your app’s auth flow (e.g., OAuth, JWT).
+- **Environment**: Run `pip install playwright` and `playwright install` to set up Playwright.
 
-**`README.md`**
-```markdown
-# MERN Training App with Playwright Tests
+## **Key Takeaways**
+- **MERN-Specific**: Examples test React routing, Express APIs, and MongoDB-driven content.
+- **Practical**: Covers login, task management, and dashboard scenarios typical in MERN apps.
+- **Advanced**: Includes retries, auth states, and waits for dynamic React UIs.
+- **Training-Ready**: Demonstrates Playwright’s power in full-stack testing for your participants.
 
-## Setup
-1. **Backend**:
-   - `cd backend`
-   - `npm install`
-   - Start MongoDB (`mongod`)
-   - Seed a user: `{ username: "testuser", password: "password123" }` in `taskmanager.users`
-   - Seed tasks: e.g., `{ title: "Learn MERN", status: "pending" }` in `taskmanager.tasks`
-   - `npm start`
-
-2. **Frontend**:
-   - `cd frontend`
-   - `npm install`
-   - `npm start`
-
-3. **Tests**:
-   - `cd tests`
-   - `pip install -r requirements.txt`
-   - `playwright install`
-   - Run `python test_navigation.py` (first run generates `mern_auth_state.json`)
-   - Then `pytest test_navigation.py`
-
-## Notes
-- Backend runs on `http://localhost:5000`.
-- Frontend runs on `http://localhost:3000`.
-- Adjust selectors in `test_navigation.py` if your app’s DOM differs.
-```
-
----
-
-## **How to Create the Zip**
-1. **Create the Folder**:
-   - On your computer, create a folder named `mern-training`.
-   - Inside it, create subfolders: `backend`, `frontend`, `tests`.
-   - Add `README.md` to the root.
-
-2. **Copy Files**:
-   - Place the backend files in `backend/`.
-   - Place the frontend files in `frontend/` (put `.js` files in `frontend/src/`).
-   - Place the test files in `tests/`.
-
-3. **Generate Dependencies** (optional for distribution):
-   - Run `npm install` in `backend/` and `frontend/` to generate `node_modules/`.
-   - Alternatively, let participants run `npm install` themselves to save space.
-
-4. **Compress**:
-   - On Windows: Right-click `mern-training` > "Send to" > "Compressed (zipped) folder".
-   - On Mac/Linux: `zip -r mern-training.zip mern-training/`.
-
-5. **Distribute**:
-   - Share `mern-training.zip` via email, cloud storage (e.g., Google Drive), or during your session.
-
----
-
-## **Adjustments**
-- **Selectors**: If your MERN app uses different class names (e.g., not `.task-list`), update `test_navigation.py`.
-- **Routes**: Modify URLs in `App.js` and `server.js` if your app uses different paths.
-- **Auth**: The JWT secret is hardcoded (`secret`); use environment variables in a real app.
