@@ -88,3 +88,11 @@ public class UserTest {
 | Teardown inside setup | Yes (`yield`)               | No, separate methods       |
 | Parameterized setup   | Built-in support            | Manual                     |
 
+start pytest
+  └─ create session-scoped browser
+        └─ create context (new per test)
+              └─ create page (new per test)
+                    └─ run test
+                    └─ close page
+              └─ close context
+  └─ if all tests done → close browser
