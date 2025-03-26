@@ -1,6 +1,3 @@
-Great question! Let's break it down by comparing `pytest.fixture` (Python) with how JUnit (Java) handles setup and teardown logic.
-
----
 
 ## ✅ **1. Purpose:**
 
