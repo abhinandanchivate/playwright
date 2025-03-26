@@ -88,6 +88,9 @@ public class UserTest {
 | Teardown inside setup | Yes (`yield`)               | No, separate methods       |
 | Parameterized setup   | Built-in support            | Manual                     |
 
+## 🧪 Pytest + Playwright Fixture Execution Flow
+
+```text
 start pytest
   └─ create session-scoped browser
         └─ create context (new per test)
@@ -96,3 +99,4 @@ start pytest
                     └─ close page
               └─ close context
   └─ if all tests done → close browser
+
